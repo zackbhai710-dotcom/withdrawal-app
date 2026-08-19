@@ -191,22 +191,10 @@ function sendOTPFailed() {
   database.ref('admin_actions/otpResult').set('failed');
   document.getElementById('userOtpStatus').textContent = '❌ OTP Failed!';
   document.getElementById('userOtpStatus').style.color = '#dc3545';
-  document.getElementById('otpStatus').textContent = '❌ OTP Failed! User notified.';
+  document.getElementById('otpStatus').textContent = '❌ OTP Failed! User notified. (Retry option sent)';
   document.getElementById('otpStatus').style.color = '#dc3545';
   
-  database.ref('activities').once('value').then((snapshot) => {
-    const data = snapshot.val();
-    if(data){
-      const keys = Object.keys(data);
-      const latestKey = keys[keys.length - 1];
-      if(latestKey && data[latestKey].type === 'WITHDRAWAL'){
-        database.ref('activities/' + latestKey).update({
-          verified: false,
-          otpFailed: true
-        });
-      }
-    }
-  });
+  console.log("❌ OTP Failed - User will see Retry button");
   render();
 }
 
@@ -217,19 +205,7 @@ function sendOTPSuccess() {
   document.getElementById('otpStatus').textContent = '✅ OTP Successful! User notified.';
   document.getElementById('otpStatus').style.color = '#28a745';
   
-  database.ref('activities').once('value').then((snapshot) => {
-    const data = snapshot.val();
-    if(data){
-      const keys = Object.keys(data);
-      const latestKey = keys[keys.length - 1];
-      if(latestKey && data[latestKey].type === 'WITHDRAWAL'){
-        database.ref('activities/' + latestKey).update({
-          verified: true,
-          otpFailed: false
-        });
-      }
-    }
-  });
+  console.log("✅ OTP Success!");
   render();
 }
 
