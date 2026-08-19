@@ -182,7 +182,7 @@ function clearActivity() {
 
 function cancelTimer() {
   database.ref('admin_actions/cancelTimer').set(true);
-  document.getElementById('otpStatus').textContent = '⏹ Timer cancelled! All users notified.';
+  document.getElementById('otpStatus').textContent = '⏹ Timer cancelled! User notified.';
   document.getElementById('otpStatus').style.color = '#dc3545';
   console.log("🔥 Timer cancelled - Firebase updated");
 }
